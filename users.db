@@ -1,0 +1,3 @@
+{"username":"acme_boss","password":"$2b$10$vnK2TtKf/sirrSuwvGCsTe0DK5QQrACzV5xpPAj1d6phDaS3Hf.L.","organizationId":"O33Cf4NZVJVOtSWR","role":"admin","_id":"24x2bfyo0j80dWAZ"}
+{"$$indexCreated":{"fieldName":"username","unique":true,"sparse":false}}
+{"$$indexCreated":{"fieldName":"username","unique":true}}
