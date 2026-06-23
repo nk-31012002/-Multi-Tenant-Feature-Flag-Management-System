@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Feature Flags</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; }
+
+  header { background: #1a1a2e; color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+
+  main { max-width: 680px; margin: 40px auto; padding: 0 16px; }
+
+  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+  .card h2 { font-size: 14px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px; }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+  .tab { padding: 7px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid #ddd; background: #fff; color: #555; }
+  .tab.active { background: #1a1a2e; color: #fff; border-color: #1a1a2e; }
+
+  label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #333; }
+  input[type="text"], input[type="password"] { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.15s; }
+  input:focus { border-color: #1a1a2e; }
+  .row { margin-bottom: 14px; }
+
+  button { padding: 9px 18px; background: #1a1a2e; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; }
+  button:hover { opacity: 0.85; }
+  button.ghost { background: transparent; color: #666; border: 1px solid #ddd; }
+  button.ghost:hover { background: #f5f5f5; }
+  button.danger { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  button.danger:hover { background: #fee2e2; }
+
+  .msg { font-size: 13px; margin-top: 10px; padding: 8px 12px; border-radius: 6px; }
+  .msg.ok  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  td { font-size: 13px; padding: 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .badge.on  { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  .badge.off { background: #fafafa; color: #888; border: 1px solid #e5e5e5; }
+
+  .actions { display: flex; gap: 6px; }
+  .empty { text-align: center; padding: 32px; color: #aaa; font-size: 13px; }
+
+  #auth-view { display: block; }
+  #dashboard-view { display: none; }
+  #signup-form { display: block; }
+  #login-form  { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚩 Feature Flags — Admin</h1>
+  <span id="nav-user" style="font-size:13px;color:#aaa;"></span>
+</header>
+
+<main>
+
+  <!-- AUTH -->
+  <div id="auth-view">
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('signup')">Sign Up</button>
+        <button class="tab" onclick="showTab('login')">Log In</button>
+      </div>
+
+      <div id="signup-form">
+        <div class="row"><label>Organization ID</label><input id="s-orgid" type="text" placeholder="Paste from Super Admin"></div>
+        <div class="row"><label>Username</label><input id="s-user" type="text" placeholder="your-username"></div>
+        <div class="row"><label>Password</label><input id="s-pass" type="password" placeholder="••••••••"></div>
+        <button onclick="signup()">Create Account</button>
+        <div id="signup-msg"></div>
+      </div>
+
+      <div id="login-form">
+        <div class="row"><label>Username</label><input id="l-user" type="text" placeholder="your-username"></div>
+        <div class="row"><label>Password</label><input id="l-pass" type="password" placeholder="••••••••"></div>
+        <button onclick="login()">Log In</button>
+        <div id="login-msg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-view">
+    <div class="card">
+      <h2>New Feature Flag</h2>
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div style="flex:1;">
+          <label>Feature Key</label>
+          <input id="flag-key" type="text" placeholder="e.g. dark_mode">
+        </div>
+        <div>
+          <label>Enabled</label>
+          <select id="flag-enabled" style="padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#fff;">
+            <option value="false">Off</option>
+            <option value="true">On</option>
+          </select>
+        </div>
+        <button onclick="createFlag()">Add Flag</button>
+      </div>
+      <div id="flag-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Feature Flags</h2>
+      <div id="flag-list"></div>
+    </div>
+
+    <div style="text-align:center;">
+      <button class="ghost" onclick="logout()">Log out</button>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  let token = '';
+
+  function showTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', (i === 0) === (tab === 'signup')));
+    document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
+    document.getElementById('login-form').style.display  = tab === 'login'  ? 'block' : 'none';
+  }
+
+  async function signup() {
+    const organizationId = document.getElementById('s-orgid').value;
+    const username = document.getElementById('s-user').value;
+    const password = document.getElementById('s-pass').value;
+    const res = await fetch('/api/admin/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, organizationId })
+    });
+    const data = await res.json();
+    msg('signup-msg', res.ok ? 'Account created. You can now log in.' : data.error, res.ok ? 'ok' : 'err');
+    if (res.ok) showTab('login');
+  }
+
+  async function login() {
+    const username = document.getElementById('l-user').value;
+    const password = document.getElementById('l-pass').value;
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (data.token) {
+      token = data.token;
+      document.getElementById('auth-view').style.display = 'none';
+      document.getElementById('dashboard-view').style.display = 'block';
+      document.getElementById('nav-user').textContent = username;
+      loadFlags();
+    } else {
+      msg('login-msg', data.error, 'err');
+    }
+  }
+
+  async function loadFlags() {
+    const res = await fetch('/api/flags', { headers: { 'Authorization': 'Bearer ' + token } });
+    const data = await res.json();
+    const el = document.getElementById('flag-list');
+    if (!data.length) {
+      el.innerHTML = '<div class="empty">No flags yet. Add one above.</div>';
+      return;
+    }
+    el.innerHTML = `
+      <table>
+        <thead><tr><th>Key</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          ${data.map(f => `
+            <tr>
+              <td><code style="font-size:13px;">${f.featureKey}</code></td>
+              <td><span class="badge ${f.enabled ? 'on' : 'off'}">${f.enabled ? 'ON' : 'OFF'}</span></td>
+              <td class="actions">
+                <button class="ghost" style="font-size:12px;padding:5px 12px;" onclick="toggle('${f._id}', ${f.enabled})">
+                  ${f.enabled ? 'Disable' : 'Enable'}
+                </button>
+                <button class="danger" style="font-size:12px;padding:5px 12px;" onclick="deleteFlag('${f._id}')">Delete</button>
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  async function createFlag() {
+    const featureKey = document.getElementById('flag-key').value;
+    const enabled = document.getElementById('flag-enabled').value === 'true';
+    const res = await fetch('/api/flags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ featureKey, enabled })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('flag-key').value = '';
+      msg('flag-msg', `Flag "${data.featureKey}" created.`, 'ok');
+      loadFlags();
+    } else {
+      msg('flag-msg', data.error, 'err');
+    }
+  }
+
+  async function toggle(id, current) {
+    await fetch(`/api/flags/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ enabled: !current })
+    });
+    loadFlags();
+  }
+
+  async function deleteFlag(id) {
+    if (!confirm('Delete this flag?')) return;
+    await fetch(`/api/flags/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+    loadFlags();
+  }
+
+  function logout() {
+    token = '';
+    document.getElementById('auth-view').style.display = 'block';
+    document.getElementById('dashboard-view').style.display = 'none';
+    document.getElementById('nav-user').textContent = '';
+  }
+
+  function msg(id, text, type) {
+    document.getElementById(id).innerHTML = `<div class="msg ${type}">${text}</div>`;
+  }
+</script>
+</body>
+</html>

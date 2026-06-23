@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Check Feature — Feature Flags</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; display: flex; flex-direction: column; }
+
+  header { background: #0f4c75; color: #fff; padding: 16px 24px; }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+
+  main { flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 32px; width: 100%; max-width: 440px; }
+  .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .card p  { font-size: 13px; color: #777; margin-bottom: 24px; }
+
+  label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #333; }
+  input { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.15s; }
+  input:focus { border-color: #0f4c75; }
+  .row { margin-bottom: 14px; }
+
+  button { width: 100%; padding: 11px; background: #0f4c75; color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 4px; }
+  button:hover { opacity: 0.9; }
+
+  .result { margin-top: 20px; padding: 16px; border-radius: 8px; text-align: center; }
+  .result.enabled  { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .result.disabled { background: #fafafa; border: 1px solid #e5e5e5; }
+  .result .icon { font-size: 28px; margin-bottom: 6px; }
+  .result .label { font-size: 15px; font-weight: 700; }
+  .result .key   { font-size: 12px; color: #888; margin-top: 4px; font-family: monospace; }
+
+  .err { margin-top: 14px; font-size: 13px; padding: 10px 14px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚩 Feature Flags — Check Feature</h1>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Is this feature on?</h2>
+    <p>Enter your organization ID and a feature key to check its status.</p>
+
+    <div class="row">
+      <label>Organization ID</label>
+      <input id="org-id" type="text" placeholder="Paste your organization ID">
+    </div>
+    <div class="row">
+      <label>Feature Key</label>
+      <input id="feature-key" type="text" placeholder="e.g. dark_mode" onkeydown="if(event.key==='Enter') check()">
+    </div>
+    <button onclick="check()">Check Feature</button>
+
+    <div id="result"></div>
+  </div>
+</main>
+
+<script>
+  async function check() {
+    const organizationId = document.getElementById('org-id').value.trim();
+    const featureKey = document.getElementById('feature-key').value.trim();
+    const el = document.getElementById('result');
+
+    if (!organizationId || !featureKey) {
+      el.innerHTML = '<div class="err">Please fill in both fields.</div>';
+      return;
+    }
+
+    const res = await fetch(`/api/check-flag?organizationId=${encodeURIComponent(organizationId)}&featureKey=${encodeURIComponent(featureKey)}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      el.innerHTML = `<div class="err">${data.error}</div>`;
+      return;
+    }
+
+    if (data.enabled) {
+      el.innerHTML = `
+        <div class="result enabled">
+          <div class="icon">✅</div>
+          <div class="label" style="color:#166534;">Feature is ON</div>
+          <div class="key">${featureKey}</div>
+        </div>`;
+    } else {
+      el.innerHTML = `
+        <div class="result disabled">
+          <div class="icon">⭕</div>
+          <div class="label" style="color:#555;">Feature is OFF</div>
+          <div class="key">${featureKey}</div>
+        </div>`;
+    }
+  }
+</script>
+</body>
+</html>

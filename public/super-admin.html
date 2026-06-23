@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Super Admin — Feature Flags</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; }
+  
+  header { background: #111; color: #fff; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+  header span { font-size: 12px; color: #888; }
+  
+  main { max-width: 640px; margin: 40px auto; padding: 0 16px; }
+  
+  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px; margin-bottom: 24px; }
+  .card h2 { font-size: 14px; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 20px; }
+  
+  label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: #333; }
+  input { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.15s; }
+  input:focus { border-color: #111; }
+  
+  .row { margin-bottom: 14px; }
+  
+  button { padding: 9px 18px; background: #111; color: #fff; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  button:hover { background: #333; }
+  button.secondary { background: transparent; color: #666; border: 1px solid #ddd; }
+  button.secondary:hover { background: #f5f5f5; }
+  
+  .msg { font-size: 13px; margin-top: 10px; padding: 8px 12px; border-radius: 6px; }
+  .msg.ok { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+  
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: #888; text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  td { font-size: 13px; padding: 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  
+  .id-pill { font-family: monospace; font-size: 11px; background: #f5f5f5; padding: 3px 8px; border-radius: 4px; cursor: pointer; color: #666; border: 1px solid #e5e5e5; }
+  .id-pill:hover { background: #eee; }
+  
+  .empty { text-align: center; padding: 32px; color: #aaa; font-size: 13px; }
+  
+  #login-view { display: block; }
+  #dashboard-view { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚩 Feature Flags — Super Admin</h1>
+  <span id="nav-logout" style="display:none;">
+    <button class="secondary" onclick="logout()" style="font-size:12px;padding:5px 12px;">Log out</button>
+  </span>
+</header>
+
+<main>
+
+  <!-- LOGIN -->
+  <div id="login-view">
+    <div class="card">
+      <h2>Log In</h2>
+      <div class="row"><label>Username</label><input id="username" type="text" placeholder="superadmin"></div>
+      <div class="row"><label>Password</label><input id="password" type="password" placeholder="••••••••"></div>
+      <button onclick="login()">Log in</button>
+      <div id="login-msg"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-view">
+    <div class="card">
+      <h2>Create Organization</h2>
+      <div class="row"><label>Organization Name</label><input id="org-name" type="text" placeholder="Acme Corp"></div>
+      <button onclick="createOrg()">Create</button>
+      <div id="org-msg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Organizations</h2>
+      <div id="org-list"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  let token = '';
+
+  async function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const res = await fetch('/api/super/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (data.token) {
+      token = data.token;
+      document.getElementById('login-view').style.display = 'none';
+      document.getElementById('dashboard-view').style.display = 'block';
+      document.getElementById('nav-logout').style.display = 'block';
+      loadOrgs();
+    } else {
+      msg('login-msg', data.error, 'err');
+    }
+  }
+
+  async function createOrg() {
+    const name = document.getElementById('org-name').value;
+    const res = await fetch('/api/super/organizations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ name })
+    });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('org-name').value = '';
+      msg('org-msg', `Created "${data.name}". ID copied to clipboard.`, 'ok');
+      navigator.clipboard?.writeText(data._id);
+      loadOrgs();
+    } else {
+      msg('org-msg', data.error, 'err');
+    }
+  }
+
+  async function loadOrgs() {
+    const res = await fetch('/api/super/organizations', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const data = await res.json();
+    const el = document.getElementById('org-list');
+    if (!data.length) {
+      el.innerHTML = '<div class="empty">No organizations yet.</div>';
+      return;
+    }
+    el.innerHTML = `
+      <table>
+        <thead><tr><th>Name</th><th>ID (click to copy)</th></tr></thead>
+        <tbody>
+          ${data.map(o => `
+            <tr>
+              <td>${o.name}</td>
+              <td><span class="id-pill" onclick="copy('${o._id}', this)">${o._id}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  function copy(id, el) {
+    navigator.clipboard?.writeText(id);
+    const old = el.textContent;
+    el.textContent = 'Copied!';
+    setTimeout(() => el.textContent = old, 1500);
+  }
+
+  function logout() {
+    token = '';
+    document.getElementById('login-view').style.display = 'block';
+    document.getElementById('dashboard-view').style.display = 'none';
+    document.getElementById('nav-logout').style.display = 'none';
+    document.getElementById('login-msg').innerHTML = '';
+  }
+
+  function msg(id, text, type) {
+    document.getElementById(id).innerHTML = `<div class="msg ${type}">${text}</div>`;
+  }
+</script>
+</body>
+</html>
